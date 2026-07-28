@@ -1,0 +1,516 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans)}
+#app{background:#0a1a0a;min-height:600px;border-radius:12px;overflow:hidden;position:relative;padding:0}
+.top-bar{background:#0d230d;border-bottom:1px solid #1a3a1a;padding:10px 20px;display:flex;align-items:center;justify-content:space-between}
+.logo{color:#4ade80;font-size:18px;font-weight:500;letter-spacing:1px}
+.score-box{background:#122012;border:1px solid #2a5a2a;border-radius:8px;padding:6px 16px;display:flex;align-items:center;gap:8px}
+.score-label{color:#86efac;font-size:12px}
+.score-val{color:#4ade80;font-size:20px;font-weight:500}
+.main{display:grid;grid-template-columns:1fr 280px;gap:0;height:550px}
+.farm{position:relative;background:linear-gradient(180deg,#0d1f0d 0%,#102410 40%,#0a1a0a 100%);overflow:hidden}
+.sidebar{background:#0d1a0d;border-left:1px solid #1a3a1a;overflow-y:auto;padding:12px}
+
+/* Sky strip */
+.sky{position:absolute;top:0;left:0;right:0;height:80px;background:linear-gradient(180deg,#0a2a3a 0%,#0d2010 100%);border-bottom:1px solid #1a4a1a}
+.cloud-icon{position:absolute;top:15px;right:40px;color:#86efac;font-size:28px;opacity:0.7}
+.sun{position:absolute;top:18px;left:50px;width:36px;height:36px;background:#facc15;border-radius:50%;box-shadow:0 0 24px #facc1588}
+
+/* Tank */
+.tank-wrap{position:absolute;top:20px;left:20px}
+.tank-label{color:#86efac;font-size:11px;margin-bottom:4px;text-align:center}
+.tank-body{width:54px;height:70px;border:2px solid #4ade80;border-radius:4px;background:#0d230d;position:relative;overflow:hidden}
+.tank-water{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(180deg,#22d3ee88,#0891b2cc);transition:height 0.5s}
+.tank-pct{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;font-size:11px;font-weight:500;z-index:2}
+.tank-low{animation:tankPulse 0.6s infinite}
+@keyframes tankPulse{0%,100%{border-color:#4ade80}50%{border-color:#ef4444}}
+
+/* Motor */
+.motor-wrap{position:absolute;top:105px;left:16px}
+.motor-body{width:62px;height:40px;background:#1a2a1a;border:2px solid #4ade80;border-radius:6px;display:flex;align-items:center;justify-content:center;position:relative}
+.motor-label{color:#86efac;font-size:10px;text-align:center;margin-bottom:3px}
+.motor-spin{font-size:20px;transition:all 0.3s}
+.motor-on .motor-spin{animation:spin 0.4s linear infinite;color:#4ade80}
+.motor-off .motor-spin{color:#374151}
+@keyframes spin{100%{transform:rotate(360deg)}}
+.motor-status{font-size:9px;text-align:center;margin-top:2px}
+
+/* Pipes */
+svg.pipes{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+
+/* Crops */
+.crop-row{position:absolute;display:flex;gap:8px}
+.crop{font-size:22px;display:flex;flex-direction:column;align-items:center;transition:all 0.5s}
+.crop-state-wilted .crop-plant{filter:grayscale(0.8) brightness(0.6);transform:scale(0.85)}
+.crop-state-good .crop-plant{filter:none;transform:scale(1)}
+.crop-state-great .crop-plant{filter:brightness(1.2);transform:scale(1.1)}
+.crop-plant{font-size:24px;transition:all 0.5s}
+
+/* Sensors on field */
+.sensor-node{position:absolute;display:flex;flex-direction:column;align-items:center;gap:2px}
+.sensor-dot{width:14px;height:14px;border-radius:50%;border:2px solid;animation:sensorPulse 2s infinite}
+.sensor-dot.moisture{border-color:#22d3ee;background:#0891b244}
+.sensor-dot.dht{border-color:#a78bfa;background:#7c3aed44}
+.sensor-dot.flow{border-color:#fb923c;background:#ea580c44}
+@keyframes sensorPulse{0%,100%{box-shadow:0 0 0 0 currentColor44}50%{box-shadow:0 0 0 5px transparent}}
+.sensor-node-label{color:#86efac;font-size:9px;white-space:nowrap}
+
+/* Leak */
+.leak-spot{position:absolute;display:none}
+.leak-spot.active{display:block}
+.leak-drop{font-size:14px;animation:drip 0.7s ease-in infinite}
+@keyframes drip{0%{transform:translateY(0);opacity:1}100%{transform:translateY(14px);opacity:0}}
+
+/* Water particles on pipe */
+.water-particle{position:absolute;width:6px;height:6px;background:#22d3ee;border-radius:50%;opacity:0.85;pointer-events:none}
+
+/* Alert popup */
+.alert-popup{position:absolute;top:88px;right:10px;background:#1a0a0a;border:1px solid #ef4444;border-radius:8px;padding:8px 12px;color:#fca5a5;font-size:11px;max-width:160px;display:none;z-index:10;animation:popIn 0.3s ease}
+.alert-popup.show{display:block}
+@keyframes popIn{0%{transform:scale(0.8);opacity:0}100%{transform:scale(1);opacity:1}}
+.cloud-sync{position:absolute;top:14px;right:10px;color:#38bdf8;font-size:11px;display:flex;align-items:center;gap:4px}
+.sync-dot{width:6px;height:6px;background:#38bdf8;border-radius:50%;animation:syncPulse 1.5s infinite}
+@keyframes syncPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.3;transform:scale(0.7)}}
+
+/* Sidebar */
+.s-title{color:#4ade80;font-size:12px;font-weight:500;letter-spacing:0.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #1a3a1a}
+.sensor-card{background:#0a1a0a;border:1px solid #1a3a1a;border-radius:8px;padding:10px;margin-bottom:8px}
+.sc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.sc-name{color:#86efac;font-size:11px}
+.sc-badge{font-size:9px;padding:2px 7px;border-radius:10px;font-weight:500}
+.sc-badge.ok{background:#14532d;color:#4ade80}
+.sc-badge.warn{background:#713f12;color:#fbbf24}
+.sc-badge.danger{background:#7f1d1d;color:#fca5a5}
+.gauge-bar{height:8px;background:#1a2a1a;border-radius:4px;overflow:hidden;margin-bottom:4px}
+.gauge-fill{height:100%;border-radius:4px;transition:width 0.5s}
+.gauge-fill.blue{background:#0891b2}
+.gauge-fill.purple{background:#7c3aed}
+.gauge-fill.orange{background:#ea580c}
+.gauge-fill.green{background:#16a34a}
+.sc-val{color:#e2e8f0;font-size:13px;font-weight:500}
+.sc-unit{color:#64748b;font-size:10px}
+
+.ctrl-btn{width:100%;padding:8px;border-radius:6px;border:none;font-size:12px;font-weight:500;cursor:pointer;margin-bottom:6px;transition:all 0.2s}
+.ctrl-btn.green{background:#14532d;color:#4ade80;border:1px solid #16a34a}
+.ctrl-btn.green:hover{background:#166534}
+.ctrl-btn.red{background:#7f1d1d;color:#fca5a5;border:1px solid #dc2626}
+.ctrl-btn.red:hover{background:#991b1b}
+.ctrl-btn.yellow{background:#713f12;color:#fbbf24;border:1px solid #d97706}
+.ctrl-btn.yellow:hover{background:#92400e}
+.ctrl-btn.gray{background:#1a2a1a;color:#86efac;border:1px solid #374151}
+
+.alert-log{background:#0a1a0a;border:1px solid #1a3a1a;border-radius:8px;padding:8px;max-height:110px;overflow-y:auto}
+.log-entry{font-size:10px;color:#64748b;padding:2px 0;border-bottom:1px solid #0d1f0d;display:flex;gap:6px}
+.log-entry:last-child{border-bottom:none}
+.log-entry.warn{color:#fbbf24}
+.log-entry.danger{color:#fca5a5}
+.log-entry.ok{color:#4ade80}
+.log-time{color:#374151;min-width:36px}
+</style>
+
+<div id="app">
+  <div class="top-bar">
+    <div class="logo">&#127807; GreenFlow</div>
+    <div style="color:#86efac;font-size:11px">IoT Smart Irrigation — Live Simulation</div>
+    <div class="score-box">
+      <span class="score-label">Efficiency</span>
+      <span class="score-val" id="effScore">100</span>
+      <span style="color:#4ade80;font-size:12px">%</span>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- FARM VIEW -->
+    <div class="farm" id="farmView">
+      <!-- Sky -->
+      <div class="sky">
+        <div class="sun"></div>
+        <div class="cloud-sync">
+          <div class="sync-dot"></div>
+          <span style="color:#38bdf8">Cloud sync</span>
+        </div>
+        <div class="cloud-icon" aria-hidden="true">&#9729;</div>
+      </div>
+
+      <!-- Tank -->
+      <div class="tank-wrap" id="tankWrap">
+        <div class="tank-label">Water Tank</div>
+        <div class="tank-body" id="tankBody">
+          <div class="tank-water" id="tankWater" style="height:80%"></div>
+          <div class="tank-pct" id="tankPct">80%</div>
+        </div>
+      </div>
+
+      <!-- Motor -->
+      <div class="motor-wrap" id="motorWrap">
+        <div class="motor-label">Motor / Pump</div>
+        <div class="motor-body motor-off" id="motorBody">
+          <span class="motor-spin" id="motorSpin">&#9881;</span>
+        </div>
+        <div class="motor-status" id="motorStatus" style="color:#374151">IDLE</div>
+      </div>
+
+      <!-- Pipe SVG -->
+      <svg class="pipes" id="pipeSvg" viewBox="0 0 500 430" preserveAspectRatio="none">
+        <defs>
+          <marker id="aw" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="#22d3ee" stroke-width="1.5"/>
+          </marker>
+        </defs>
+        <!-- Main horizontal pipe -->
+        <path id="mainPipe" d="M80 185 H440" fill="none" stroke="#1a5a1a" stroke-width="6" stroke-linecap="round"/>
+        <!-- Water flow overlay -->
+        <path id="waterPipe" d="M80 185 H440" fill="none" stroke="#22d3ee" stroke-width="4" stroke-linecap="round" stroke-dasharray="16 12" stroke-dashoffset="0" opacity="0"/>
+        <!-- Branch to row 1 -->
+        <path d="M200 185 V240" fill="none" stroke="#1a5a1a" stroke-width="4"/>
+        <path id="b1" d="M200 185 V240" fill="none" stroke="#22d3ee" stroke-width="3" stroke-dasharray="10 10" opacity="0"/>
+        <!-- Branch to row 2 -->
+        <path d="M340 185 V280" fill="none" stroke="#1a5a1a" stroke-width="4"/>
+        <path id="b2" d="M340 185 V280" fill="none" stroke="#22d3ee" stroke-width="3" stroke-dasharray="10 10" opacity="0"/>
+        <!-- Leak spot circle -->
+        <circle id="leakCircle" cx="270" cy="185" r="7" fill="#ef4444" opacity="0" />
+      </svg>
+
+      <!-- Alert popup -->
+      <div class="alert-popup" id="alertPopup">
+        &#128680; Leak detected at pipe segment! Flow anomaly.
+      </div>
+
+      <!-- Crops Row 1 -->
+      <div class="crop-row" style="top:230px;left:140px" id="cropRow1">
+        <div class="crop crop-state-good"><span class="crop-plant" id="c1">&#127807;</span></div>
+        <div class="crop crop-state-good"><span class="crop-plant" id="c2">&#127807;</span></div>
+        <div class="crop crop-state-good"><span class="crop-plant" id="c3">&#127807;</span></div>
+        <div class="crop crop-state-good"><span class="crop-plant" id="c4">&#127807;</span></div>
+        <div class="crop crop-state-good"><span class="crop-plant" id="c5">&#127807;</span></div>
+      </div>
+
+      <!-- Crops Row 2 -->
+      <div class="crop-row" style="top:270px;left:200px" id="cropRow2">
+        <div class="crop crop-state-good"><span class="crop-plant" id="c6">&#127807;</span></div>
+        <div class="crop crop-state-good"><span class="crop-plant" id="c7">&#127807;</span></div>
+        <div class="crop crop-state-good"><span class="crop-plant" id="c8">&#127807;</span></div>
+        <div class="crop crop-state-good"><span class="crop-plant" id="c9">&#127807;</span></div>
+        <div class="crop crop-state-good"><span class="crop-plant" id="c10">&#127807;</span></div>
+      </div>
+
+      <!-- Sensor nodes on field -->
+      <div class="sensor-node" style="top:320px;left:150px">
+        <div class="sensor-dot moisture" style="color:#22d3ee"></div>
+        <div class="sensor-node-label">Moisture 1</div>
+      </div>
+      <div class="sensor-node" style="top:350px;left:310px">
+        <div class="sensor-dot moisture" style="color:#22d3ee"></div>
+        <div class="sensor-node-label">Moisture 2</div>
+      </div>
+      <div class="sensor-node" style="top:198px;left:380px">
+        <div class="sensor-dot flow" style="color:#fb923c"></div>
+        <div class="sensor-node-label">Flow</div>
+      </div>
+      <div class="sensor-node" style="top:88px;left:220px">
+        <div class="sensor-dot dht" style="color:#a78bfa"></div>
+        <div class="sensor-node-label">DHT11</div>
+      </div>
+
+      <!-- Leak visual -->
+      <div class="leak-spot" id="leakSpot" style="top:175px;left:255px">
+        <div style="display:flex;gap:2px">
+          <span class="leak-drop" style="animation-delay:0s">&#128167;</span>
+          <span class="leak-drop" style="animation-delay:0.25s">&#128167;</span>
+          <span class="leak-drop" style="animation-delay:0.5s">&#128167;</span>
+        </div>
+      </div>
+
+      <!-- ESP32 node icon -->
+      <div style="position:absolute;top:90px;left:310px;background:#0d230d;border:1px solid #22d3ee;border-radius:6px;padding:5px 8px;color:#22d3ee;font-size:9px;text-align:center">
+        <div style="font-size:14px">&#128268;</div>
+        <div>ESP32</div>
+        <div style="color:#38bdf8;font-size:8px">GSM</div>
+      </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="s-title">&#128268; Sensor Readings</div>
+
+      <!-- Soil Moisture 1 -->
+      <div class="sensor-card">
+        <div class="sc-header">
+          <span class="sc-name">&#127807; Soil Moisture 1 (YL-69)</span>
+          <span class="sc-badge ok" id="sm1Badge">OK</span>
+        </div>
+        <div class="gauge-bar"><div class="gauge-fill blue" id="sm1Bar" style="width:72%"></div></div>
+        <span class="sc-val" id="sm1Val">72</span><span class="sc-unit">% moisture</span>
+      </div>
+
+      <!-- Soil Moisture 2 -->
+      <div class="sensor-card">
+        <div class="sc-header">
+          <span class="sc-name">&#127807; Soil Moisture 2 (YL-69)</span>
+          <span class="sc-badge ok" id="sm2Badge">OK</span>
+        </div>
+        <div class="gauge-bar"><div class="gauge-fill blue" id="sm2Bar" style="width:65%"></div></div>
+        <span class="sc-val" id="sm2Val">65</span><span class="sc-unit">% moisture</span>
+      </div>
+
+      <!-- DHT11 -->
+      <div class="sensor-card">
+        <div class="sc-header">
+          <span class="sc-name">&#127777; Temp &amp; Humidity (DHT11)</span>
+          <span class="sc-badge ok" id="dhtBadge">OK</span>
+        </div>
+        <div style="display:flex;gap:10px">
+          <div style="flex:1">
+            <div class="gauge-bar"><div class="gauge-fill purple" id="tempBar" style="width:55%"></div></div>
+            <span class="sc-val" id="tempVal">28</span><span class="sc-unit">°C</span>
+          </div>
+          <div style="flex:1">
+            <div class="gauge-bar"><div class="gauge-fill purple" id="humBar" style="width:60%"></div></div>
+            <span class="sc-val" id="humVal">60</span><span class="sc-unit">% RH</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Water Flow -->
+      <div class="sensor-card">
+        <div class="sc-header">
+          <span class="sc-name">&#128166; Flow Sensor (YF-S201)</span>
+          <span class="sc-badge ok" id="flowBadge">OK</span>
+        </div>
+        <div class="gauge-bar"><div class="gauge-fill orange" id="flowBar" style="width:0%"></div></div>
+        <span class="sc-val" id="flowVal">0.0</span><span class="sc-unit"> L/min</span>
+      </div>
+
+      <!-- Water Level -->
+      <div class="sensor-card">
+        <div class="sc-header">
+          <span class="sc-name">&#128167; Tank Water Level</span>
+          <span class="sc-badge ok" id="wlBadge">OK</span>
+        </div>
+        <div class="gauge-bar"><div class="gauge-fill green" id="wlBar" style="width:80%"></div></div>
+        <span class="sc-val" id="wlVal">80</span><span class="sc-unit">%</span>
+      </div>
+
+      <div class="s-title" style="margin-top:10px">&#127918; Controls</div>
+
+      <button class="ctrl-btn green" id="motorBtn" onclick="toggleMotor()">&#9654; Start Motor / Pump</button>
+      <button class="ctrl-btn yellow" id="leakBtn" onclick="triggerLeak()">&#128680; Simulate Leak</button>
+      <button class="ctrl-btn gray" id="fixBtn" onclick="fixLeak()" style="display:none">&#128295; Fix Leak</button>
+      <button class="ctrl-btn gray" onclick="drainSoil()">&#9730; Dry Soil (time skip)</button>
+      <button class="ctrl-btn gray" onclick="refillTank()">&#128167; Refill Tank</button>
+
+      <div class="s-title" style="margin-top:10px">&#128241; Alert Log</div>
+      <div class="alert-log" id="alertLog">
+        <div class="log-entry ok"><span class="log-time">00:00</span> System online. All sensors nominal.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const state = {
+  motorOn: false,
+  leakActive: false,
+  sm1: 72, sm2: 65,
+  temp: 28, hum: 60,
+  flow: 0,
+  waterLevel: 80,
+  efficiency: 100,
+  t: 0
+};
+
+let animFrame, pipeAnim=0, startTime=Date.now();
+
+function fmtTime(){
+  let s=Math.floor((Date.now()-startTime)/1000);
+  return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+}
+
+function log(msg, type='ok'){
+  const el=document.getElementById('alertLog');
+  const d=document.createElement('div');
+  d.className='log-entry '+type;
+  d.innerHTML='<span class="log-time">'+fmtTime()+'</span> '+msg;
+  el.appendChild(d);
+  el.scrollTop=el.scrollHeight;
+}
+
+function setBadge(id, text, type){
+  const el=document.getElementById(id);
+  el.textContent=text; el.className='sc-badge '+type;
+}
+
+function updateUI(){
+  const {sm1,sm2,temp,hum,flow,waterLevel,motorOn,leakActive}=state;
+
+  // Soil moisture cards
+  document.getElementById('sm1Bar').style.width=sm1+'%';
+  document.getElementById('sm1Val').textContent=Math.round(sm1);
+  if(sm1<30){setBadge('sm1Badge','LOW','danger')}else if(sm1<50){setBadge('sm1Badge','WARN','warn')}else{setBadge('sm1Badge','OK','ok')}
+
+  document.getElementById('sm2Bar').style.width=sm2+'%';
+  document.getElementById('sm2Val').textContent=Math.round(sm2);
+  if(sm2<30){setBadge('sm2Badge','LOW','danger')}else if(sm2<50){setBadge('sm2Badge','WARN','warn')}else{setBadge('sm2Badge','OK','ok')}
+
+  // DHT
+  document.getElementById('tempBar').style.width=(temp/50*100)+'%';
+  document.getElementById('tempVal').textContent=Math.round(temp);
+  document.getElementById('humBar').style.width=hum+'%';
+  document.getElementById('humVal').textContent=Math.round(hum);
+
+  // Flow
+  document.getElementById('flowBar').style.width=Math.min(flow/10*100,100)+'%';
+  document.getElementById('flowVal').textContent=flow.toFixed(1);
+  if(leakActive && motorOn){
+    setBadge('flowBadge','LEAK!','danger');
+  } else {
+    setBadge('flowBadge', flow>0?'FLOWING':'IDLE', flow>0?'ok':'warn');
+  }
+
+  // Water level
+  document.getElementById('wlBar').style.width=waterLevel+'%';
+  document.getElementById('wlVal').textContent=Math.round(waterLevel);
+  document.getElementById('tankWater').style.height=waterLevel+'%';
+  document.getElementById('tankPct').textContent=Math.round(waterLevel)+'%';
+  const tb=document.getElementById('tankBody');
+  if(waterLevel<20){setBadge('wlBadge','CRITICAL','danger');tb.classList.add('tank-low')}
+  else if(waterLevel<40){setBadge('wlBadge','LOW','warn');tb.classList.remove('tank-low')}
+  else{setBadge('wlBadge','OK','ok');tb.classList.remove('tank-low')}
+
+  // Motor
+  const mb=document.getElementById('motorBody');
+  const ms=document.getElementById('motorSpin');
+  if(motorOn){mb.className='motor-body motor-on';document.getElementById('motorStatus').style.color='#4ade80';document.getElementById('motorStatus').textContent='RUNNING';}
+  else{mb.className='motor-body motor-off';document.getElementById('motorStatus').style.color='#374151';document.getElementById('motorStatus').textContent='IDLE';}
+
+  // Pipe animation
+  const wp=document.getElementById('waterPipe');
+  const b1=document.getElementById('b1'); const b2=document.getElementById('b2');
+  if(motorOn){
+    wp.setAttribute('opacity','0.85');
+    b1.setAttribute('opacity','0.85'); b2.setAttribute('opacity','0.85');
+    pipeAnim-=2;
+    wp.setAttribute('stroke-dashoffset',pipeAnim);
+    b1.setAttribute('stroke-dashoffset',pipeAnim);
+    b2.setAttribute('stroke-dashoffset',pipeAnim);
+  } else {
+    wp.setAttribute('opacity','0');
+    b1.setAttribute('opacity','0'); b2.setAttribute('opacity','0');
+  }
+
+  // Leak visual
+  const lc=document.getElementById('leakCircle');
+  const ls=document.getElementById('leakSpot');
+  const ap=document.getElementById('alertPopup');
+  if(leakActive && motorOn){
+    lc.setAttribute('opacity','0.9');
+    ls.classList.add('active');
+    ap.classList.add('show');
+  } else {
+    lc.setAttribute('opacity','0');
+    ls.classList.remove('active');
+    ap.classList.remove('show');
+  }
+
+  // Crop health
+  const cropIds=['c1','c2','c3','c4','c5','c6','c7','c8','c9','c10'];
+  const avgMoist=(sm1+sm2)/2;
+  cropIds.forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    if(avgMoist<25){el.style.filter='grayscale(0.9) brightness(0.5)';el.style.transform='scale(0.75)'}
+    else if(avgMoist<50){el.style.filter='grayscale(0.3) brightness(0.8)';el.style.transform='scale(0.9)'}
+    else if(avgMoist>75){el.style.filter='brightness(1.3)';el.style.transform='scale(1.1)'}
+    else{el.style.filter='none';el.style.transform='scale(1)'}
+  });
+
+  // Efficiency
+  let eff=100;
+  if(leakActive && motorOn) eff-=30;
+  if(sm1<30 || sm2<30) eff-=20;
+  if(waterLevel<20) eff-=20;
+  if(motorOn && sm1>80 && sm2>80) eff-=10; // over-watering
+  state.efficiency=Math.max(0,Math.min(100,eff));
+  document.getElementById('effScore').textContent=state.efficiency;
+  document.getElementById('effScore').style.color=eff>70?'#4ade80':eff>40?'#fbbf24':'#ef4444';
+}
+
+function tick(){
+  state.t++;
+  // Passive soil dry (every 60 ticks = slow)
+  if(state.t % 60 === 0){
+    state.sm1=Math.max(0,state.sm1-1.5);
+    state.sm2=Math.max(0,state.sm2-1.2);
+    if(state.sm1<30 && !state.motorOn) log('Soil moisture 1 is LOW — consider watering','warn');
+    if(state.sm2<30 && !state.motorOn) log('Soil moisture 2 is LOW — consider watering','warn');
+  }
+  // Motor effects
+  if(state.motorOn){
+    state.flow = state.leakActive ? 7.5 : 4.2;
+    if(state.waterLevel>0){
+      state.waterLevel=Math.max(0,state.waterLevel-0.04);
+      state.sm1=Math.min(100,state.sm1+0.3);
+      state.sm2=Math.min(100,state.sm2+0.25);
+    } else {
+      state.motorOn=false;
+      log('Tank empty! Motor stopped automatically.','danger');
+      document.getElementById('motorBtn').textContent='&#9654; Start Motor / Pump';
+      document.getElementById('motorBtn').className='ctrl-btn green';
+    }
+  } else {
+    state.flow=0;
+  }
+  // DHT gentle variation
+  state.temp += (Math.random()-0.5)*0.3;
+  state.temp=Math.min(45,Math.max(20,state.temp));
+  state.hum += (Math.random()-0.5)*0.5;
+  state.hum=Math.min(95,Math.max(30,state.hum));
+
+  updateUI();
+  animFrame=requestAnimationFrame(tick);
+}
+
+function toggleMotor(){
+  state.motorOn=!state.motorOn;
+  const btn=document.getElementById('motorBtn');
+  if(state.motorOn){
+    btn.textContent='&#9646;&#9646; Stop Motor';
+    btn.className='ctrl-btn red';
+    log('Motor started. Pump ON. Irrigation active.','ok');
+  } else {
+    btn.textContent='&#9654; Start Motor / Pump';
+    btn.className='ctrl-btn green';
+    log('Motor stopped. Pump OFF.','warn');
+  }
+}
+
+function triggerLeak(){
+  if(state.leakActive) return;
+  state.leakActive=true;
+  document.getElementById('leakBtn').style.display='none';
+  document.getElementById('fixBtn').style.display='block';
+  log('&#128680; LEAK DETECTED in irrigation pipe! Flow anomaly detected.','danger');
+  log('SMS alert sent to farmer\'s mobile.','warn');
+}
+
+function fixLeak(){
+  state.leakActive=false;
+  document.getElementById('leakBtn').style.display='block';
+  document.getElementById('fixBtn').style.display='none';
+  log('Leak repaired. System normal.','ok');
+}
+
+function drainSoil(){
+  state.sm1=Math.max(0,state.sm1-35);
+  state.sm2=Math.max(0,state.sm2-30);
+  log('Soil dried (time skip). Moisture levels dropped.','warn');
+}
+
+function refillTank(){
+  state.waterLevel=100;
+  log('Water tank refilled to 100%.','ok');
+}
+
+tick();
+</script>
